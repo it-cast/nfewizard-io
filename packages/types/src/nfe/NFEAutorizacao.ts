@@ -1887,34 +1887,71 @@ export type gIBSCBS = {
 
 /**
  * Grupo de Informações do IBS e CBS em operações com imposto monofásico - [UB84]
- * Validação UB13-40: exigido quando ind_gIBSCBSMono = 1. Implantação em produção a partir de 04/01/2027.
- * NT 2025.002 v1.35: implementação em homologação postergada (implementação futura).
+ * Validação UB13-40: exigido quando ind_gIBSCBSMono = 1.
+ * Estrutura da NT 2025.002 v1.50 (schema DFeTiposBasicos `TMonofasia`): o IBS vem em `gIBSMonoAdRem` OU `gIBSMonoAdValorem`, e a CBS em
+ * `gCBSMonoAdRem` OU `gCBSMonoAdValorem`. Os grupos soltos `gMonoPadrao`/`gMonoReten`/`gMonoRet`/`gMonoDif` das versões anteriores não
+ * passam mais no schema.
  */
-export type gIBSCBSMono = {
+export type gIBSCBSMono = IBSMonoEscolha & CBSMonoEscolha & {
     /**
-     * @param {gMonoPadrao} gMonoPadrao - Grupo de informações da Tributação Monofásica Padrão - [UB84a]
+     * @param {number | string} vTotIBSMonoItem - Total de IBS Monofásico do item - [UB104]
      */
-    gMonoPadrao?: gMonoPadrao;
+    vTotIBSMonoItem: number | string;
     /**
-     * @param {gMonoReten} gMonoReten - Grupo de informações da Tributação Monofásica Sujeita à Retenção - [UB90]
+     * @param {number | string} vTotCBSMonoItem - Total da CBS Monofásica do item - [UB105]
      */
-    gMonoReten?: gMonoReten;
-    /**
-     * @param {gMonoRet} gMonoRet - Grupo de informações da Tributação Monofásica Retida Anteriormente - [UB94]
-     */
-    gMonoRet?: gMonoRet;
-    /**
-     * @param {gMonoDif} gMonoDif - Grupo de informações do Diferimento da Tributação Monofásica - [UB99]
-     */
-    gMonoDif?: gMonoDif;
-    /**
-     * @param {number} vTotIBSMonoItem - Total de IBS Monofásico. - [UB104]
-     */
-    vTotIBSMonoItem: number;
-    /**
-     * @param {number} vTotCBSMonoItem - Total da CBS Monofásica - [UB105]
-     */
-    vTotCBSMonoItem: number;
+    vTotCBSMonoItem: number | string;
+};
+
+/** IBS monofásico: ad rem OU ad valorem (ou nenhum) */
+export type IBSMonoEscolha =
+    | { gIBSMonoAdRem: gIBSMonoAdRem; gIBSMonoAdValorem?: never }
+    | { gIBSMonoAdValorem: gIBSMonoAdValorem; gIBSMonoAdRem?: never }
+    | { gIBSMonoAdRem?: never; gIBSMonoAdValorem?: never };
+
+/** CBS monofásica: ad rem OU ad valorem (ou nenhum) */
+export type CBSMonoEscolha =
+    | { gCBSMonoAdRem: gCBSMonoAdRem; gCBSMonoAdValorem?: never }
+    | { gCBSMonoAdValorem: gCBSMonoAdValorem; gCBSMonoAdRem?: never }
+    | { gCBSMonoAdRem?: never; gCBSMonoAdValorem?: never };
+
+/** Diferença do biocombustível na monofásica (NT 2025.002 v1.50) */
+export type gpBioDiferencaIBS = { qBCBioComb: number | string; vIBSDiferenca: number | string };
+export type gpBioDiferencaCBS = { qBCBioComb: number | string; vCBSDiferenca: number | string };
+
+/** IBS monofásico ad rem (por quantidade) */
+export type gIBSMonoAdRem = {
+    gMonoPadrao?: { qBCMono: number | string; adRemIBS: number | string; vIBSMono: number | string };
+    gMonoReten?: { qBCMonoReten: number | string; adRemIBSReten: number | string; vIBSMonoReten: number | string };
+    gMonoRet?: { vIBSMonoRet: number | string };
+    gpBioDiferenca?: gpBioDiferencaIBS;
+};
+
+/** IBS monofásico ad valorem (por valor) */
+export type gIBSMonoAdValorem = {
+    gMonoPadrao?: {
+        vBCMono: number | string; pAliqMonoUF: number | string; vIBSMonoUF: number | string;
+        pAliqMonoMun: number | string; vIBSMonoMun: number | string; vIBSMono: number | string;
+    };
+    gMonoReten?: { vBCMonoReten: number | string; pAliqMonoReten: number | string; vIBSMonoReten: number | string };
+    gMonoRet?: { vIBSMonoRet: number | string };
+    gpBioDiferenca?: gpBioDiferencaIBS;
+};
+
+/** CBS monofásica ad rem (por quantidade) */
+export type gCBSMonoAdRem = {
+    gMonoPadrao?: { qBCMono: number | string; adRemCBS: number | string; vCBSMono: number | string };
+    gMonoReten?: { qBCMonoReten: number | string; adRemCBSReten: number | string; vCBSMonoReten: number | string };
+    gMonoRet?: { vCBSMonoRet: number | string };
+    gpBioDiferenca?: gpBioDiferencaCBS;
+};
+
+/** CBS monofásica ad valorem (por valor) */
+export type gCBSMonoAdValorem = {
+    gMonoPadrao?: { vBCMono: number | string; pAliqMonoCBS: number | string; vCBSMono: number | string };
+    gMonoReten?: { vBCMonoReten: number | string; pAliqMonoReten: number | string; vCBSMonoReten: number | string };
+    gMonoRet?: { vCBSMonoRet: number | string };
+    gpBioDiferenca?: gpBioDiferencaCBS;
 };
 
 /**
@@ -2180,6 +2217,7 @@ export type gTribCompraGov = {
  * Validação UB84a-10: exigido quando ind_gMonoPadrao = 1. Implantação em produção a partir de 04/01/2027.
  * NT 2025.002 v1.35: implementação em homologação postergada (implementação futura).
  */
+/** @deprecated Estrutura anterior à NT 2025.002 v1.50 (não passa no schema atual). Use gIBSMonoAdRem/gIBSMonoAdValorem/gCBSMonoAdRem/gCBSMonoAdValorem. */
 export type gMonoPadrao = {
     /**
      * @param {number} qBCMono - Quantidade tributada na monofasia - [UB85]
@@ -2213,6 +2251,7 @@ export type gMonoPadrao = {
  * Validação UB90-10: exigido quando ind_gMonoReten = 1. Implantação em produção a partir de 04/01/2027.
  * NT 2025.002 v1.35: implementação em homologação postergada (implementação futura).
  */
+/** @deprecated Estrutura anterior à NT 2025.002 v1.50 (não passa no schema atual). Use gIBSMonoAdRem/gIBSMonoAdValorem/gCBSMonoAdRem/gCBSMonoAdValorem. */
 export type gMonoReten = {
     /**
      * @param {number} qBCMonoReten - Quantidade tributada sujeita à retenção na monofasia - [UB91]
@@ -2246,6 +2285,7 @@ export type gMonoReten = {
  * Validação UB94-10: exigido quando ind_gMonoRet = 1. Implantação em produção a partir de 04/01/2027.
  * NT 2025.002 v1.35: implementação em homologação postergada (implementação futura).
  */
+/** @deprecated Estrutura anterior à NT 2025.002 v1.50 (não passa no schema atual). Use gIBSMonoAdRem/gIBSMonoAdValorem/gCBSMonoAdRem/gCBSMonoAdValorem. */
 export type gMonoRet = {
     /**
      * @param {number} qBCMonoRet - Quantidade tributada retida anteriormente - [UB95]
@@ -2281,6 +2321,7 @@ export type gMonoRet = {
  * Validação UB99-10: exigido quando ind_gMonoDif = 1. Implantação em produção a partir de 04/01/2027.
  * NT 2025.002 v1.35: implementação em homologação postergada (implementação futura).
  */
+/** @deprecated Estrutura anterior à NT 2025.002 v1.50 (não passa no schema atual). Use gIBSMonoAdRem/gIBSMonoAdValorem/gCBSMonoAdRem/gCBSMonoAdValorem. */
 export type gMonoDif = {
     /**
      * @param {number} pDifIBS - Percentual do diferimento do imposto monofásico - [UB100]

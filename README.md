@@ -1,6 +1,6 @@
 # NFeWizard-io 🪄
 
-## 🛠️ Lib atualizada com NT 2025.002 v.1.35 - Reforma Tributária
+## 🛠️ Lib atualizada com NT 2025.002 - Reforma Tributária (schemas da v1.50; v1.52 e v1.53 alteram só regras de validação)
 
 ---
 

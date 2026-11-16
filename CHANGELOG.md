@@ -1,5 +1,38 @@
 # Changelog
 
+## [2026-11-16]
+
+### Security
+
+- **`@nfewizard/nfce` / `@nfewizard/shared` — CSC e senha do certificado fora dos logs**
+  - A autorização de NFC-e deixa de enviar o CSC em cabeçalho HTTP (o protocolo da SEFAZ não usa; ele só entra no hash do QR Code v2).
+  - O logger mascara senha, CSC, CSRT e chave privada em qualquer log (`mascararSegredos`), sem alterar o objeto original.
+  - `ValidateEnvironment` deixa de registrar a senha do certificado na inicialização.
+
+### Feat
+
+- **`@nfewizard/nfce` — Resultado estruturado da autorização**
+  - Novos `NFCE_AutorizacaoDetalhada` e `NFCE_TransmitirContingenciaDetalhada`: `situacao` (`autorizada`, `rejeitada`, `denegada`,
+    `contingencia_pendente`, `erro`), `autorizada`, `cStat`, `xMotivo`, `chave`, `protocolo`, `dhRecbto`. Não imprimem no console e não lançam
+    exceção por rejeição. Contingência nunca sai como autorizada (sem `cStat '000'` nem `nProt 'CONTINGENCIA'`).
+  - `NFCE_Autorizacao` e `NFCE_TransmitirContingencia` mantêm o comportamento atual.
+  - `@nfewizard/shared`: o erro de rejeição lançado em `verificaRejeicao` passa a levar `cStat` e `xMotivo`.
+
+- **`@nfewizard/nfce` — QR Code v3 (NT 2025.001)**
+  - Opção `nfe.versaoQRCode` (`'2'` padrão | `'3'`). v3 on-line sem CSC; v3 off-line com assinatura RSA-SHA1 (Base64) do certificado.
+  - Padrões da v3 no `leiauteNFe_v4.00.xsd` (escritos a partir do Manual do DANFE NFC-e; substituir pelo PL oficial quando publicado).
+
+### Fix
+
+- **`@nfewizard/shared` / `@nfewizard/types` — Bloco `nfce` da configuração**: aceito como apelido de `nfe` (como o README documentava);
+  com os dois, `nfe` prevalece e `nfce` completa o que faltar. README corrigido.
+- **`@nfewizard/nfce` — Dia do QR Code off-line**: tirado do próprio `dhEmi`, não do fuso do servidor (uma nota das 22h de Brasília num
+  servidor em UTC saía com o dia seguinte).
+- **`@nfewizard/types` — Grupo `gIBSCBSMono` no formato da NT 2025.002 v1.50**: o IBS vem em `gIBSMonoAdRem` OU `gIBSMonoAdValorem` e a CBS em
+  `gCBSMonoAdRem` OU `gCBSMonoAdValorem` (com `gpBioDiferenca`), como no schema `TMonofasia`. Os grupos soltos `gMonoPadrao`/`gMonoReten`/
+  `gMonoRet`/`gMonoDif` não passavam no schema; os tipos antigos ficam exportados como `@deprecated`.
+- **Docs**: a versão da NT 2025.002 declarada passa a refletir os schemas (v1.50); as v1.52 e v1.53 alteram regras de validação e prazos.
+
 ## [2026-08-23]
 
 ### Feat

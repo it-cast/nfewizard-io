@@ -1,6 +1,6 @@
 # @nfewizard/nfce 🪄
 
-## 🛠️ Lib atualizada com NT 2025.002 v.1.35 - Reforma Tributária
+## 🛠️ Lib atualizada com NT 2025.002 - Reforma Tributária (schemas da v1.50; v1.52 e v1.53 alteram só regras de validação)
 
 ## Atenção: Ao abrir uma issue certifique-se de adicionar as informações abaixo:
 
@@ -111,6 +111,18 @@ const nfceData: NFe = {} as NFe;
 const resultado = await nfceWizard.NFCE_Autorizacao(nfceData);
 console.log(resultado);
 
+// Recomendado: resultado estruturado, sem console e sem exceção por rejeição
+const r = await nfceWizard.NFCE_AutorizacaoDetalhada(nfceData);
+if (r.autorizada) {
+    // r.chave, r.protocolo, r.dhRecbto, r.xmls
+} else if (r.situacao === 'contingencia_pendente') {
+    // guardar r.xmls[0].xmlAssinado e transmitir depois (NFCE_TransmitirContingenciaDetalhada)
+} else if (r.situacao === 'erro') {
+    // sem resposta fiscal (rede/certificado/XML): consultar pela chave antes de emitir de novo
+} else {
+    // 'rejeitada' ou 'denegada': r.cStat e r.xMotivo
+}
+
 // Exemplo de Cancelamento de NFCe
 const eventoCancelamento: Cancelamento = {
     idLote: Date.now(),
@@ -189,12 +201,32 @@ if (xmlPendente) {
 }
 ```
 
+### Resultado estruturado (`NFCE_AutorizacaoDetalhada` / `NFCE_TransmitirContingenciaDetalhada`)
+
+| Campo | Conteúdo |
+|---|---|
+| `situacao` | `autorizada`, `rejeitada`, `denegada`, `contingencia_pendente` ou `erro` |
+| `autorizada` | `true` **somente** com autorização real da SEFAZ (cStat 100 ou 150) |
+| `cStat`, `xMotivo` | Código e motivo da SEFAZ (`null` quando não houve resposta fiscal) |
+| `chave`, `protocolo`, `dhRecbto` | Chave de acesso; protocolo só em `autorizada`/`denegada` (nunca o marcador `CONTINGENCIA`) |
+| `emContingencia`, `xmls` | Se foi gerada off-line; XMLs assinados (e o retorno da SEFAZ, quando houver) |
+
+Os métodos antigos (`NFCE_Autorizacao`, `NFCE_TransmitirContingencia`) continuam iguais.
+
+### QR Code v3 (NT 2025.001)
+
+`config.nfe.versaoQRCode: '3'` gera o QR Code v3: on-line `?p=chave|3|tpAmb` (sem CSC) e, em contingência off-line,
+`?p=chave|3|tpAmb|dia|vNF|tp_idDest|idDest|assinatura` com assinatura RSA-SHA1 (Base64) do certificado. O padrão continua `'2'`.
+Só use `'3'` onde a SEFAZ da UF já aceita em produção: em UF não habilitada a nota é rejeitada (407).
+
 ### Retorno esperado na etapa offline
 
 Na emissão em contingência (`NFCE_Autorizacao` com `tpEmis=9`), o retorno sinaliza que a nota foi gerada localmente e ainda precisa ser transmitida:
 
 - `cStat = '000'` (codigo interno de contingência da biblioteca)
 - `nProt = 'CONTINGENCIA'`
+- ⚠️ Esses dois valores são marcadores internos, **não** autorização da SEFAZ: guarde a nota como pendente de transmissão.
+  O `NFCE_AutorizacaoDetalhada` já devolve `situacao: 'contingencia_pendente'` e `protocolo: null`.
 - `xmlAssinado` disponivel para armazenamento e transmissão posterior
 
 Se `dfe.armazenarXMLAutorizacao = true`, os XMLs de contingência sao salvos em `dfe.pathXMLAutorizacao`.

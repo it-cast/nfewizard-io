@@ -18,7 +18,7 @@ de alto nível para automação de processos fiscais brasileiros relacionados a:
 - **CT-e** — Conhecimento de Transporte Eletrônico
 - **DANFE / DANFCE / DANFSe** — Geração do documento auxiliar (PDF)
 
-Está alinhada à **NT 2025.002 v1.35 — Reforma Tributária** e suporta operações em
+Está alinhada à **NT 2025.002 — Reforma Tributária** (schemas da v1.50; v1.52 e v1.53 alteram só regras de validação) e suporta operações em
 ambiente de **homologação (2)** e **produção (1)**.
 
 ### Para que serve
