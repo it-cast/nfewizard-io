@@ -16,7 +16,7 @@
  */
 
 import { Utility } from '@nfewizard/shared';
-import { createHash } from 'crypto';
+import { createHash, createSign } from 'crypto';
 import sha1 from 'sha1';
 
 // Função para gerar o hash SHA-1 em formato hexadecimal
@@ -82,4 +82,52 @@ export function generateQRCodeURLOffline(
 
     // Montar URL
     return `${urlQRCodeNFCe}?p=${baseString}|${hash}`;
+}
+
+/** Destinatário do QR Code v3 off-line: tp_idDest 1 = CNPJ, 2 = CPF; sem destinatário (ou estrangeiro) os dois campos ficam vazios */
+export interface DestinatarioQRCodeV3 {
+    tpIdDest: '' | '1' | '2' | '3';
+    idDest: string;
+}
+
+/** Destinatário a partir do grupo `dest` já normalizado (CNPJ/CPF/idEstrangeiro) */
+export function destinatarioQRCodeV3(dest?: { CNPJ?: string; CPF?: string } | null): DestinatarioQRCodeV3 {
+    const cnpj = String(dest?.CNPJ ?? '').trim();
+    if (cnpj) return { tpIdDest: '1', idDest: cnpj };
+    const cpf = String(dest?.CPF ?? '').trim();
+    if (cpf) return { tpIdDest: '2', idDest: cpf };
+    return { tpIdDest: '', idDest: '' };
+}
+
+/**
+ * QR Code versão 3, emissão ON-LINE (NT 2025.001): `?p=<chave>|3|<tpAmb>`. Não usa CSC nem hash.
+ */
+export function generateQRCodeV3URLOnline(chaveAcesso: string, tipoAmbiente: number, utility: Utility): string {
+    const urlQRCodeNFCe = utility.getUrlNFCe('URL-QRCode', false, '');
+    return `${urlQRCodeNFCe}?p=${chaveAcesso.replace('NFe', '')}|3|${tipoAmbiente}`;
+}
+
+/** Parâmetros 1 a 7 do QR Code v3 off-line, com os separadores (é o texto assinado) */
+export function textoQRCodeV3Offline(chaveAcesso: string, tipoAmbiente: number, diaDataEmissao: string, valorTotalNfce: string, dest: DestinatarioQRCodeV3): string {
+    return `${chaveAcesso.replace('NFe', '')}|3|${tipoAmbiente}|${diaDataEmissao}|${valorTotalNfce}|${dest.tpIdDest}|${dest.idDest}`;
+}
+
+/**
+ * QR Code versão 3, CONTINGÊNCIA OFF-LINE (tpEmis 9, NT 2025.001 / Manual do DANFE NFC-e):
+ * `?p=<chave>|3|<tpAmb>|<dia>|<vNF>|<tp_idDest>|<idDest>|<assinatura>`, onde a assinatura é RSA-SHA1 em Base64 dos parâmetros 1 a 7
+ * (com os "|"), feita com a chave privada do MESMO certificado que assina a NFC-e. Não usa CSC.
+ */
+export function generateQRCodeV3URLOffline(
+    chaveAcesso: string,
+    tipoAmbiente: number,
+    diaDataEmissao: string,
+    valorTotalNfce: string,
+    dest: DestinatarioQRCodeV3,
+    chavePrivadaPem: string,
+    utility: Utility
+): string {
+    const urlQRCodeNFCe = utility.getUrlNFCe('URL-QRCode', false, '');
+    const texto = textoQRCodeV3Offline(chaveAcesso, tipoAmbiente, diaDataEmissao, valorTotalNfce, dest);
+    const assinatura = createSign('RSA-SHA1').update(texto, 'utf8').sign(chavePrivadaPem, 'base64');
+    return `${urlQRCodeNFCe}?p=${texto}|${assinatura}`;
 }

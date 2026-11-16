@@ -32,11 +32,21 @@ class Environment {
     agent: https.Agent;
     public isLoaded: boolean;
     constructor(config: NFeWizardProps) {
-        this.config = config;
+        this.config = Environment.normalizarConfig(config);
         this.certificate = '';
         this.cert_key = '';
         this.agent = {} as https.Agent;
         this.isLoaded = false;
+    }
+
+    /**
+     * Aceita o bloco `nfce` (como o README do @nfewizard/nfce documentava) como apelido de `nfe`, que é o que a biblioteca lê.
+     * Com os dois, `nfe` prevalece e `nfce` só completa o que faltar (ex.: idCSC/tokenCSC).
+     */
+    static normalizarConfig(config: NFeWizardProps): NFeWizardProps {
+        const nfce = config?.nfce;
+        if (!nfce) return config;
+        return { ...config, nfe: { ...nfce, ...(config.nfe ?? {}) } as NFeWizardProps['nfe'] };
     }
 
     getIsLoaded() {

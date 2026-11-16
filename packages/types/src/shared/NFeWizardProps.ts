@@ -116,6 +116,11 @@ export type NFeWizardProps = {
          */
         idCSC?: number;
         /**
+         * @param {'2' | '3'} versaoQRCode - Versão do QR Code da NFC-e. '2' (padrão) usa o CSC; '3' (NT 2025.001) dispensa o CSC e,
+         * em contingência off-line, assina com o certificado. Só use '3' onde a SEFAZ da UF já aceita (senão: rejeição 407).
+         */
+        versaoQRCode?: '2' | '3';
+        /**
          * @param {string} CSRT - Código de Segurança do Responsável Técnico (16 a 36 bytes alfanumérico)
          * Utilizado para gerar automaticamente o hashCSRT quando infRespTec.idCSRT for informado
          */
@@ -126,6 +131,11 @@ export type NFeWizardProps = {
          */
         contribuinteExclusivoIBSCBS?: boolean;
     };
+    /**
+    * @param {obj} nfce - Apelido de `nfe` para quem usa só NFC-e (mesmos campos). A biblioteca lê `nfe`; com os dois, `nfe` prevalece
+    * e `nfce` completa o que faltar.
+    */
+    nfce?: Partial<NFeWizardProps['nfe']>;
     /**
     * @param email -Preencher para casos onde for necessário utilizar envio de e-mail;
     */

@@ -84,11 +84,12 @@ await nfceWizard.NFCE_LoadEnvironment({
             UF: "SP",
             CPFCNPJ: "99999999999999",
         },
-        nfce: {
+        nfe: { // o bloco `nfce` com os mesmos campos também é aceito (apelido de `nfe`)
             ambiente: 2, // 1=Produção, 2=Homologação
             versaoDF: "4.00",
             idCSC: 1,
-            tokenCSC: '99999999-9999-9999-9999-999999999999'
+            tokenCSC: '99999999-9999-9999-9999-999999999999',
+            versaoQRCode: '2', // '3' só onde a SEFAZ da UF já aceita o QR Code v3 (NT 2025.001)
         },
         lib: {
             connection: {

@@ -646,7 +646,8 @@ class Utility {
                 mensagemErro = Array.isArray(xMotivo) ? xMotivo[0] : xMotivo;
             }
             
-            throw new Error(mensagemErro);
+            // cStat e xMotivo vão junto no erro: quem chama consegue separar rejeição de denegação sem ler o texto
+            throw Object.assign(new Error(mensagemErro), { cStat: cStatNumber, xMotivo: mensagemErro });
         }
 
         // Busca todos os xMotivo no objeto (verificação adicional)
@@ -655,7 +656,10 @@ class Utility {
         // Verifica se algum xMotivo contém "Rejeição" ou "Rejeicao"
         for (const xMotivo of allXMotivos) {
             if (xMotivo && (xMotivo.includes('Rejeição') || xMotivo.includes('Rejeicao'))) {
-                throw new Error(xMotivo);
+                const cStatRejeicao = this.findAllInObj(responseInJson, 'cStat')
+                    .map((c: unknown) => parseInt(String(Array.isArray(c) ? c[0] : c), 10))
+                    .find((c: number) => Number.isFinite(c) && !codigosValidos.includes(c));
+                throw Object.assign(new Error(xMotivo), { cStat: cStatRejeicao ?? null, xMotivo });
             }
         }
 

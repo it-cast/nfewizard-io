@@ -24,8 +24,7 @@ class ValidateEnvironment {
             context: 'ValidateEnvironment',
             config: {
                 pathCertificado: config.dfe.pathCertificado,
-                senhaCertificado: config.dfe.senhaCertificado,
-                ambiente: config.nfe.ambiente
+                ambiente: config.nfe?.ambiente
             }
         });
 

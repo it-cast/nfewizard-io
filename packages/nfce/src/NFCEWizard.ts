@@ -23,6 +23,7 @@ import { NFCEAutorizacaoService } from './services/NFCEAutorizacao/NFCEAutorizac
 import { NFCECancelamentoService } from './services/NFCERecepcaoEvento/NFCECancelamentoService.js';
 import { NFCEAutorizacao } from './operations/NFCEAutorizacao/NFCEAutorizacao.js';
 import { NFCECancelamento } from './operations/NFCERecepcaoEvento/NFCECancelamento.js';
+import { ResultadoAutorizacaoNFCe, resultadoDaAutorizacao, resultadoDoErro } from './services/NFCEAutorizacao/util/NFCEResultado.js';
 
 /**
  * Classe principal para operações NFCe
@@ -96,6 +97,35 @@ export class NFCEWizard {
         } catch (error: any) {
             logger.error(``, error, { context: 'NFCE_Autorizacao' });
             throw new Error(`NFCE_Autorizacao: ${error.message}`)
+        }
+    }
+
+    /**
+     * Autoriza uma NFC-e e devolve a situação fiscal estruturada, sem imprimir no console e sem lançar erro por rejeição.
+     * Use `situacao`/`autorizada` para decidir: só `autorizada === true` é nota autorizada pela SEFAZ.
+     * `contingencia_pendente` (tpEmis 4/9) NÃO é autorização: guarde como pendente e transmita depois.
+     * `erro` = sem resposta fiscal (rede, certificado, XML): consulte pela chave antes de emitir de novo.
+     */
+    async NFCE_AutorizacaoDetalhada(nfce?: any): Promise<ResultadoAutorizacaoNFCe> {
+        try {
+            const service = new NFCEAutorizacaoService(this.environment, this.utility, this.xmlBuilder, this.axios, this.saveFiles, this.gerarConsulta);
+            const resultado = resultadoDaAutorizacao(await new NFCEAutorizacao(service).Exec(nfce));
+            return { ...resultado, chave: resultado.chave ?? (service.chaveNfe ? String(service.chaveNfe).replace('NFe', '') : null) };
+        } catch (error: any) {
+            logger.error(``, error, { context: 'NFCE_AutorizacaoDetalhada' });
+            return resultadoDoErro(error);
+        }
+    }
+
+    /** Como `NFCE_TransmitirContingencia`, mas com o resultado estruturado de `NFCE_AutorizacaoDetalhada` */
+    async NFCE_TransmitirContingenciaDetalhada(nfce?: any): Promise<ResultadoAutorizacaoNFCe> {
+        try {
+            const service = new NFCEAutorizacaoService(this.environment, this.utility, this.xmlBuilder, this.axios, this.saveFiles, this.gerarConsulta);
+            const resultado = resultadoDaAutorizacao(await new NFCEAutorizacao(service).ExecTransmitirContingencia(nfce));
+            return { ...resultado, chave: resultado.chave ?? (service.chaveNfe ? String(service.chaveNfe).replace('NFe', '') : null) };
+        } catch (error: any) {
+            logger.error(``, error, { context: 'NFCE_TransmitirContingenciaDetalhada' });
+            return resultadoDoErro(error);
         }
     }
 

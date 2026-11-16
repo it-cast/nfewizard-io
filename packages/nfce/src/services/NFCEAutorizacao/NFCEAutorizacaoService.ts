@@ -19,7 +19,7 @@ import { XmlParser, Environment, Utility, XmlBuilder, ValidaCPFCNPJ, BaseNFE, mo
 import { GenericObject, LayoutNFe, NFe, ProtNFe } from '@nfewizard/types/nfe';
 import { GerarConsultaImpl, NFCEAutorizacaoServiceImpl, SaveFilesImpl } from '@nfewizard/types/shared';
 import { format } from 'date-fns';
-import { generateQRCodeURLOffline, generateQRCodeURLOnline } from './util/NFCEQRCode.js';
+import { destinatarioQRCodeV3, generateQRCodeURLOffline, generateQRCodeURLOnline, generateQRCodeV3URLOffline, generateQRCodeV3URLOnline } from './util/NFCEQRCode.js';
 import xml2js, { Builder } from 'xml2js';
 import { NFCERetornoAutorizacaoService } from '../NFCERetornoAutorizacao/NFCERetornoAutorizacaoService.js';
 import { NFCERetornoAutorizacao } from '../../operations/NFCERetornoAutorizacao/NFCERetornoAutorizacao.js';
@@ -181,14 +181,11 @@ class NFCEAutorizacaoService extends BaseNFE implements NFCEAutorizacaoServiceIm
     }
 
     private diaEmissao(dhEmi: string) {
-        // Converte a string para uma data
-        const dataAtual = new Date(dhEmi);
-
-        // Extrai o dia com dois dígitos
-        const dia = dataAtual.getDate().toString().padStart(2, '0');
-
-        // Retorna o dia
-        return dia;
+        // O dia é o do próprio dhEmi (AAAA-MM-DDThh:mm:ss-03:00), no fuso da nota. `new Date(dhEmi).getDate()` usava o fuso do
+        // servidor: uma nota das 22h de Brasília num servidor em UTC saía com o dia seguinte no QR off-line.
+        const m = /^\d{4}-\d{2}-(\d{2})/.exec(String(dhEmi ?? ''));
+        if (m) return m[1];
+        return new Date(dhEmi).getDate().toString().padStart(2, '0');
     }
 
     private calcularModulo11(sequencia: string) {
@@ -395,11 +392,15 @@ class NFCEAutorizacaoService extends BaseNFE implements NFCEAutorizacaoServiceIm
                 }
             }
 
-            const { nfe: { idCSC, tokenCSC } } = this.environment.getConfig();
+            const { nfe: { idCSC, tokenCSC, versaoQRCode } } = this.environment.getConfig();
+            // v2 (padrão, usa CSC) ou v3 (NT 2025.001, sem CSC). Só use '3' onde a SEFAZ da UF já aceita: senão é rejeição
+            const qrV3 = String(versaoQRCode ?? '2') === '3';
 
             let qrCode = '';
             if (![4, 9].includes(NFe.infNFe.ide.tpEmis)) {
-                qrCode = generateQRCodeURLOnline(chaveAcesso, '2', NFe.infNFe.ide.tpAmb, Number(idCSC), String(tokenCSC), this.utility);
+                qrCode = qrV3
+                    ? generateQRCodeV3URLOnline(chaveAcesso, NFe.infNFe.ide.tpAmb, this.utility)
+                    : generateQRCodeURLOnline(chaveAcesso, '2', NFe.infNFe.ide.tpAmb, Number(idCSC), String(tokenCSC), this.utility);
             }
 
             const urlConsultaNFCe = this.utility.getUrlNFCe('URL-ConsultaNFCe', false, '');
@@ -441,7 +442,9 @@ class NFCEAutorizacaoService extends BaseNFE implements NFCEAutorizacaoServiceIm
                 const valNF = NFe.infNFe.total.ICMSTot.vNF;
 
                 const diaEmissao = this.diaEmissao(NFe.infNFe.ide.dhEmi);
-                qrCode = generateQRCodeURLOffline(chaveAcesso, '2', tpAmb, diaEmissao, valNF, digestValue, Number(idCSC), String(tokenCSC), this.utility);
+                qrCode = qrV3
+                    ? generateQRCodeV3URLOffline(chaveAcesso, tpAmb, diaEmissao, valNF, destinatarioQRCodeV3(NFe.infNFe.dest as { CNPJ?: string; CPF?: string } | undefined), this.environment.getCertKey(), this.utility)
+                    : generateQRCodeURLOffline(chaveAcesso, '2', tpAmb, diaEmissao, valNF, digestValue, Number(idCSC), String(tokenCSC), this.utility);
 
                 xml2js.parseString(xmlAssinado, (err, result) => {
                     if (err) {
@@ -497,12 +500,10 @@ class NFCEAutorizacaoService extends BaseNFE implements NFCEAutorizacaoServiceIm
     protected async callWebService(xmlConsulta: string, webServiceUrl: string, ContentType: string, action: string, agent: Agent): Promise<AxiosResponse<any, any>> {
         const startTime = Date.now();
 
-        const { nfe: { tokenCSC } } = this.environment.getConfig();
-
+        // O CSC NÃO vai em cabeçalho HTTP: o protocolo da SEFAZ não o usa (ele só entra no hash do QR Code v2)
         const headers = {
             'Content-Type': ContentType,
             'SOAPAction': action,
-            'CSC': tokenCSC,
         }
 
         logger.http('Iniciando comunicação com o webservice', {

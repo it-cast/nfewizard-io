@@ -23,4 +23,4 @@
 
 export { ErrorContext } from './ErrorContext.js';
 export { JsonArrayTransport } from './JsonArrayTransporter.js';
-export { logger } from './logger.js';
+export { logger, mascararSegredos } from './logger.js';

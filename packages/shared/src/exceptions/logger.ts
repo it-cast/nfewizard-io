@@ -26,6 +26,32 @@ export interface LoggerConfig {
     pathLogs?: string;
 }
 
+const MASCARA = '***';
+const CHAVES_SECRETAS = new Set(['tokencsc', 'csc', 'csrt', 'authorization', 'privatekey', 'cert_key', 'certkey', 'pfx']);
+
+/** Campo cujo valor nunca pode ir para o log (senha do certificado, CSC, CSRT, chave privada...) */
+function chaveSecreta(chave: string): boolean {
+    const k = chave.toLowerCase();
+    return k.includes('senha') || k.includes('password') || CHAVES_SECRETAS.has(k);
+}
+
+/**
+ * Cópia do objeto com os valores secretos trocados por "***", em qualquer profundidade.
+ * Não altera o original (os cabeçalhos e a config continuam sendo usados pela requisição).
+ */
+export function mascararSegredos<T>(valor: T, profundidade = 0, vistos: WeakSet<object> = new WeakSet()): T {
+    if (valor === null || typeof valor !== 'object' || profundidade > 8) return valor;
+    if (valor instanceof Error || Buffer.isBuffer(valor) || valor instanceof Date) return valor;
+    if (vistos.has(valor as object)) return '[circular]' as unknown as T;
+    vistos.add(valor as object);
+    if (Array.isArray(valor)) return valor.map((v) => mascararSegredos(v, profundidade + 1, vistos)) as unknown as T;
+    const saida: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(valor as Record<string, unknown>)) {
+        saida[k] = chaveSecreta(k) && v !== undefined && v !== null && v !== '' ? MASCARA : mascararSegredos(v, profundidade + 1, vistos);
+    }
+    return saida as T;
+}
+
 class AppLogger {
     private static instance: AppLogger;
     private logger: winston.Logger;
@@ -174,13 +200,13 @@ class AppLogger {
 
     public info(message: string, meta?: any): void {
         if (this.isInitialized) {
-            this.logger.info(message, meta);
+            this.logger.info(message, mascararSegredos(meta));
         }
     }
 
     public warn(message: string, meta?: any): void {
         if (this.isInitialized) {
-            this.logger.warn(message, meta);
+            this.logger.warn(message, mascararSegredos(meta));
         }
     }
 
@@ -194,19 +220,19 @@ class AppLogger {
                     name: error.name
                 } : error;
             }
-            this.logger.error(message, logData);
+            this.logger.error(message, mascararSegredos(logData));
         }
     }
 
     public debug(message: string, meta?: any): void {
         if (this.isInitialized) {
-            this.logger.debug(message, meta);
+            this.logger.debug(message, mascararSegredos(meta));
         }
     }
 
     public http(message: string, meta?: any): void {
         if (this.isInitialized) {
-            this.logger.http(message, meta);
+            this.logger.http(message, mascararSegredos(meta));
         }
     }
 }

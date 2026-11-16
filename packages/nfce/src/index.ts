@@ -31,7 +31,10 @@ export { NFCECancelamentoService } from './services/NFCERecepcaoEvento/NFCECance
 export { NFCERecepcaoEventoService } from './services/NFCERecepcaoEvento/NFCERecepcaoEventoService.js';
 
 // NFCe Utilities
-export { generateQRCodeURLOnline, generateQRCodeURLOffline } from './services/NFCEAutorizacao/util/NFCEQRCode.js';
+export { generateQRCodeURLOnline, generateQRCodeURLOffline, generateQRCodeV3URLOnline, generateQRCodeV3URLOffline, textoQRCodeV3Offline, destinatarioQRCodeV3 } from './services/NFCEAutorizacao/util/NFCEQRCode.js';
+export type { DestinatarioQRCodeV3 } from './services/NFCEAutorizacao/util/NFCEQRCode.js';
+export { resultadoDaAutorizacao, resultadoDoErro } from './services/NFCEAutorizacao/util/NFCEResultado.js';
+export type { ResultadoAutorizacaoNFCe, SituacaoNFCe } from './services/NFCEAutorizacao/util/NFCEResultado.js';
 
 // Schema validation (re-export from @nfewizard/shared)
 export { NFE_SchemaValidate } from '@nfewizard/shared';
